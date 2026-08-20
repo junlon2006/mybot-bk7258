@@ -1,0 +1,8 @@
+[submodule "bk_avdk_smp"]
+	path = bk_avdk_smp
+	url = ../bk_avdk_smp.git
+	branch = release/v3.1.1-mybot
+[submodule "bk_solution_ai"]
+	path = bk_solution_ai
+	url = ../bk_solution_ai.git
+	branch = release/v3.1.1-mybot
