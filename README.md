@@ -4,170 +4,183 @@
 [![Upstream](https://img.shields.io/badge/upstream-mybot-0969da)](https://github.com/junlon2006/mybot)
 [![Platform](https://img.shields.io/badge/platform-BK7258-2f6f4e)](https://github.com/bekencorp/bk_avdk_smp)
 
-**简体中文 | [English](README_EN.md)**
+**[简体中文](README.zh-CN.md) | English**
 
-**mybot-bk7258** 是开源 AI 语音对话 SDK
-[mybot](https://github.com/junlon2006/mybot) 面向 BK7258 SMP 平台的参考实现。
-本仓库将 BK7258 SMP SDK、AI 解决方案、BK725x 平台适配和可直接构建的双核固件工程
-以 Git submodule 方式组织并固定到经过验证的版本，用于复现构建、平台开发和社区协作。
+**mybot-bk7258** is the BK7258 SMP reference implementation of the open-source
+[mybot](https://github.com/junlon2006/mybot) AI voice conversation SDK. This repository organizes
+the BK7258 SMP SDK, the AI solution, the BK725x platform port, and a buildable dual-core firmware
+project as pinned Git submodules. It is intended to provide reproducible builds, a practical
+platform development baseline, and a shared foundation for community collaboration.
 
-> 本项目当前定位为 BK7258 参考实现，仍在持续开发中。用于量产产品前，请结合实际硬件
-> 完成板级适配、安全审查、稳定性验证，并确认所有第三方组件的许可与商业使用条件。
+> This project is an actively developed BK7258 reference implementation. Before using it in a
+> production product, complete the board-level adaptation, security review, and stability
+> validation for the target hardware, and verify the licensing and commercial-use terms of all
+> third-party components.
 
-## 与上游 mybot 的关系
+## Relationship to upstream mybot
 
-[mybot](https://github.com/junlon2006/mybot) 是面向边缘设备的跨平台 AI 语音对话 SDK。
-其核心采用 C99 编写，依赖 AOSL 提供可移植运行时，并通过平台 `ops` 接口获取 Wi-Fi、
-持久化存储、按键、显示、音频和网络传输等设备能力。
+[mybot](https://github.com/junlon2006/mybot) is a cross-platform AI voice conversation SDK for
+edge devices. Its core is written in C99, uses AOSL as its portable runtime, and obtains device
+capabilities such as Wi-Fi, persistent storage, buttons, displays, audio, and network transport
+through platform `ops` interfaces.
 
-本仓库不重新定义 mybot SDK，而是提供 BK7258 平台所需的完整实现：
+This repository does not redefine the mybot SDK. It provides the complete implementation required
+to run mybot on the BK7258 platform:
 
-- BK7258 AP/CP 双核启动、内存和 Flash 分区配置。
-- BK725x Wi-Fi APSTA 配网、网络重连和凭据持久化。
-- 麦克风采集、扬声器播放、音量控制及音频电源管理。
-- 按键、双屏显示、EasyFlash KV、HTTPS 和设备 UID 适配。
-- 基于 Agora RTSA 的全双工 AI 语音会话，并支持用户打断 AI 回复。
-- 配网提示和配对码播报所需的中英文内嵌 OGG 资源。
-- 完整烧录固件以及同时包含 CP、AP 的 OTA 升级包。
+- BK7258 AP/CP dual-core startup, memory layout, and Flash partition configuration.
+- BK725x Wi-Fi APSTA provisioning, network reconnection, and credential persistence.
+- Microphone capture, speaker playback, volume control, and audio power management.
+- Button, dual-display, EasyFlash KV, HTTPS, and device UID adapters.
+- Full-duplex AI voice sessions over Agora RTSA, including user interruption of AI responses.
+- Embedded Chinese and English OGG assets for provisioning prompts and pairing-code announcements.
+- A complete flash image and an OTA package containing both the CP and AP firmware.
 
-设备服务端、Agora RTC 云服务和云端 AI Agent 不属于本仓库。运行完整业务流程需要接入
-与 mybot 协议兼容的设备服务。
+The device service, Agora RTC cloud service, and cloud AI agent are not part of this repository. A
+device service compatible with the mybot protocol is required to run the complete workflow.
 
-## 系统架构
+## System architecture
 
 ```mermaid
 flowchart LR
-    user["用户"] <--> device["BK7258 设备"]
-    device --> platform["BK725x 平台适配<br/>Wi-Fi · Audio · Key · LCD · KV · HTTPS"]
-    platform --> core["mybot SDK<br/>配网 · 配对 · 会话状态机"]
+    user["User"] <--> device["BK7258 device"]
+    device --> platform["BK725x platform port<br/>Wi-Fi · Audio · Key · LCD · KV · HTTPS"]
+    platform --> core["mybot SDK<br/>Provisioning · Pairing · Session state machine"]
     core <--> rtc["Agora RTC"]
-    rtc <--> agent["云端 AI Agent<br/>ASR · LLM · TTS"]
+    rtc <--> agent["Cloud AI agent<br/>ASR · LLM · TTS"]
 ```
 
-BK7258 固件采用 AP/CP 双核结构：
+The BK7258 firmware uses an AP/CP dual-core architecture:
 
-- **CP** 负责基础系统初始化和 SMP 启动控制。
-- **AP** 初始化媒体服务并启动 mybot controller，承载平台适配、设备生命周期、网络、
-  音频、显示和 RTC 会话。
-- **Controller** 根据已保存的 Wi-Fi 凭据选择 APSTA 配网或普通 STA 模式；网络连接后
-  异步启动 mybot SDK，并负责断网恢复及异常重启。
+- **CP** performs base system initialization and SMP startup control.
+- **AP** initializes the media service and starts the mybot controller. It hosts the platform
+  adapters, device lifecycle, networking, audio, display, and RTC session.
+- **Controller** selects APSTA provisioning or normal STA mode according to the saved Wi-Fi
+  credentials. After the network connects, it starts the mybot SDK asynchronously and manages
+  network recovery and unexpected SDK restarts.
 
-## 仓库结构
+## Repository layout
 
-| 路径 | 职责 | 跟踪分支 |
+| Path | Responsibility | Tracking branch |
 | --- | --- | --- |
-| `bk_avdk_smp/` | BK7258 SMP SDK、Agora IoT SDK、AOSL 和平台基础组件 | `release/v3.1.1-mybot` |
-| `bk_solution_ai/` | AI 解决方案、mybot SDK 快照、BK725x 平台适配和固件工程 | `release/v3.1.1-mybot` |
-| `bk_solution_ai/projects/mybot/` | AP/CP 入口、板级配置、分区表和提示音资源 | 随 `bk_solution_ai` |
-| `bk_solution_ai/components/mybot/` | mybot 核心及 `platforms/bk725x` 平台实现 | 随 `bk_solution_ai` |
+| `bk_avdk_smp/` | BK7258 SMP SDK, Agora IoT SDK, AOSL, and platform foundation components | `release/v3.1.1-mybot` |
+| `bk_solution_ai/` | AI solution, mybot SDK snapshot, BK725x platform port, and firmware project | `release/v3.1.1-mybot` |
+| `bk_solution_ai/projects/mybot/` | AP/CP entry points, board configuration, partition table, and prompt assets | From `bk_solution_ai` |
+| `bk_solution_ai/components/mybot/` | mybot core and the `platforms/bk725x` implementation | From `bk_solution_ai` |
 
-顶层仓库中的 gitlink 固定两个子模块的准确提交，从而保证不同开发环境使用相同源码。
-`.gitmodules` 中的 `branch` 仅用于维护者执行远端更新时选择目标分支。
+The gitlinks in the top-level repository pin both submodules to exact commits so that every
+development environment uses the same source revisions. The `branch` values in `.gitmodules`
+are used only when maintainers explicitly update the submodules from their remotes.
 
-## 环境要求
+## Requirements
 
-- Git，并支持 Git submodule。
-- Linux 构建环境及 `bk_avdk_smp` 所需的交叉编译工具链。
-- BK7258 开发板或采用相同外设连接的兼容硬件。
-- 可用的 mybot 设备服务和 Agora 服务配置。
+- Git with Git submodule support.
+- A Linux build environment and the cross-compilation toolchain required by `bk_avdk_smp`.
+- A BK7258 development board or compatible hardware using the same peripheral connections.
+- Access to a compatible mybot device service and valid Agora service configuration.
 
-BK7258 SDK 环境和烧录工具的安装方法请参考
-[Beken BK7258 SMP 文档](https://docs.bekencorp.com/arminodoc/bk_avdk_smp/smp_doc/bk7258/zh_CN/v3.1.1/index.html)。
+For BK7258 SDK environment setup and flashing tools, refer to the
+[Beken BK7258 SMP documentation](https://docs.bekencorp.com/arminodoc/bk_avdk_smp/smp_doc/bk7258/en/v3.1.1/index.html).
 
-## 获取源码
+## Get the source
 
-推荐通过 HTTPS 递归克隆：
+Clone the repository and its submodules over HTTPS:
 
 ```bash
 git clone --recurse-submodules https://github.com/junlon2006/mybot-bk7258.git
 cd mybot-bk7258
 ```
 
-已经克隆顶层仓库但尚未获取子模块时执行：
+If the top-level repository has already been cloned without its submodules, run:
 
 ```bash
 git submodule sync --recursive
 git submodule update --init --recursive
 ```
 
-克隆完成后，可用以下命令确认固定版本：
+After cloning, inspect the pinned revisions with:
 
 ```bash
 git submodule status
 ```
 
-## 构建固件
+## Build the firmware
 
-`bk_avdk_smp` 与 `bk_solution_ai` 必须保持为同级目录。请从本仓库根目录执行：
+`bk_avdk_smp` and `bk_solution_ai` must remain sibling directories. Run the following commands
+from the repository root:
 
 ```bash
 make -C bk_solution_ai/projects/mybot clean SDK_DIR="$PWD/bk_avdk_smp"
 make -C bk_solution_ai/projects/mybot bk7258 SDK_DIR="$PWD/bk_avdk_smp"
 ```
 
-构建结果位于 `bk_solution_ai/projects/mybot/build/bk7258/mybot/package/`：
+Build outputs are written to `bk_solution_ai/projects/mybot/build/bk7258/mybot/package/`:
 
-| 文件 | 用途 |
+| File | Purpose |
 | --- | --- |
-| `all-app.bin` | 包含 bootloader、CP 和 AP 的完整烧录固件 |
-| `app_pack.rbl` | 同时包含 CP 和 AP 的 OTA 升级包 |
-| `build_summary.txt` | Flash、SRAM、ITCM 和 DTCM 使用情况 |
+| `all-app.bin` | Complete flash image containing the bootloader, CP, and AP firmware |
+| `app_pack.rbl` | OTA package containing both the CP and AP firmware |
+| `build_summary.txt` | Flash, SRAM, ITCM, and DTCM usage report |
 
-CP、AP 独立二进制分别位于：
+The individual CP and AP binaries are written to:
 
 - `bk_solution_ai/projects/mybot/build/bk7258/mybot/bk7258/app.bin`
 - `bk_solution_ai/projects/mybot/build/bk7258/mybot/bk7258_ap/app.bin`
 
-## 烧录与运行
+## Flash and run
 
-使用 Beken 烧录工具将 `all-app.bin` 写入设备。具体烧录流程以所用开发板和
-[Beken 烧录文档](https://docs.bekencorp.com/arminodoc/bk_avdk_smp/smp_doc/bk7258/zh_CN/v3.1.1/get-started/index.html)
-为准。
+Use the Beken flashing tool to write `all-app.bin` to the device. Follow the instructions for the
+target development board and the
+[Beken flashing documentation](https://docs.bekencorp.com/arminodoc/bk_avdk_smp/smp_doc/bk7258/en/v3.1.1/get-started/index.html).
 
-设备启动后的参考流程如下：
+The reference device workflow is:
 
-1. 首次启动或没有有效 Wi-Fi 凭据时，设备进入 APSTA 配网模式并创建
-   `mybot-xxx` SoftAP。
-2. 连接该热点并访问 `http://192.168.4.1/`，选择目标网络并提交凭据。
-3. 设备连接网络后启动 mybot SDK，完成设备注册、配对和认证。
-4. 未认领设备会显示并播报配对码；完成认领后即可通过按键开始 AI 语音会话。
+1. On first boot, or when no valid Wi-Fi credentials exist, the device enters APSTA provisioning
+   mode and creates a `mybot-xxx` SoftAP.
+2. Connect to the SoftAP and open `http://192.168.4.1/`, then select the target network and submit
+   its credentials.
+3. After connecting to the network, the device starts the mybot SDK and performs device
+   registration, pairing, and authentication.
+4. An unclaimed device displays and announces its pairing code. After the device is claimed, use
+   the action button to start an AI voice conversation.
 
-当前参考板按键定义如下：
+The current reference-board button mapping is:
 
-| GPIO | 操作 | 功能 |
+| GPIO | Action | Function |
 | --- | --- | --- |
-| GPIO13 | 短按 | 增大音量 |
-| GPIO8 | 短按 | 减小音量 |
-| GPIO12 | 短按 | 开始或结束会话 |
-| GPIO12 | 长按约 3 秒 | 重新进入配网模式 |
+| GPIO13 | Short press | Increase volume |
+| GPIO8 | Short press | Decrease volume |
+| GPIO12 | Short press | Start or stop a conversation |
+| GPIO12 | Long press, approximately 3 seconds | Re-enter provisioning mode |
 
-GPIO、显示屏和音频外设连接属于板级配置；适配其他 BK7258 硬件时需要同步修改配置和
-平台实现。
+GPIO assignments and display and audio peripheral connections are board-level configuration.
+Porting to different BK7258 hardware requires corresponding configuration and platform changes.
 
-## 配置
+## Configuration
 
-主要工程配置位于：
+The primary project configuration files are:
 
-- AP：`bk_solution_ai/projects/mybot/ap/config/bk7258_ap/config`
-- CP：`bk_solution_ai/projects/mybot/cp/config/bk7258/config`
-- Flash 分区：`bk_solution_ai/projects/mybot/partitions/bk7258/auto_partitions.csv`
-- SRAM/PSRAM：`bk_solution_ai/projects/mybot/partitions/bk7258/ram_regions.csv`
+- AP: `bk_solution_ai/projects/mybot/ap/config/bk7258_ap/config`
+- CP: `bk_solution_ai/projects/mybot/cp/config/bk7258/config`
+- Flash partitions: `bk_solution_ai/projects/mybot/partitions/bk7258/auto_partitions.csv`
+- SRAM/PSRAM layout: `bk_solution_ai/projects/mybot/partitions/bk7258/ram_regions.csv`
 
-mybot Kconfig 当前提供：
+The mybot Kconfig currently provides:
 
-- `CONFIG_MYBOT_LANGUAGE_ZH_CN`：中文服务区域和中文提示音。
-- `CONFIG_MYBOT_LANGUAGE_EN_US`：英文服务区域和英文提示音。
-- `CONFIG_MYBOT_DEBUG_CPU`：周期性输出 CPU 使用率诊断信息，默认关闭。
+- `CONFIG_MYBOT_LANGUAGE_ZH_CN`: Chinese service region and Chinese prompt assets.
+- `CONFIG_MYBOT_LANGUAGE_EN_US`: English service region and English prompt assets.
+- `CONFIG_MYBOT_DEBUG_CPU`: Periodically print CPU usage diagnostics; disabled by default.
 
-语言选项会同时决定服务区域与提示音目录，两个语言选项必须且只能启用一个。
+The language option selects both the service region and the prompt asset directory. Exactly one of
+the two language options must be enabled.
 
-## 内嵌语音资源
+## Embedded voice assets
 
-提示音位于 `bk_solution_ai/projects/mybot/assets/locales/`，格式为 16 kHz 单声道
-Opus-in-Ogg。资源以只读 C 数组编入 AP 固件，不依赖 SD 卡，也不使用独立的
-`assets_data` 分区；解码后的 PCM 缓冲区在运行时从 PSRAM 分配。
+Prompt assets are stored under `bk_solution_ai/projects/mybot/assets/locales/` as 16 kHz mono
+Opus-in-Ogg files. They are compiled into the AP firmware as read-only C arrays, require no SD
+card, and use no separate `assets_data` partition. Decoded PCM buffers are allocated from PSRAM
+at runtime.
 
-修改或新增 OGG 后，需要在构建前手动重新生成数组：
+After modifying or adding an OGG file, regenerate the C arrays manually before building:
 
 ```bash
 python3 bk_solution_ai/projects/mybot/scripts/generate_assets_c.py \
@@ -175,12 +188,13 @@ python3 bk_solution_ai/projects/mybot/scripts/generate_assets_c.py \
   bk_solution_ai/components/mybot/platforms/bk725x/modules/storage/mybot_assets.c
 ```
 
-生成器只收集 `locales/**/*.ogg`。详细格式及更新流程见
-[`projects/mybot/assets/README.md`](bk_solution_ai/projects/mybot/assets/README.md)。
+The generator collects only `locales/**/*.ogg`. See
+[`projects/mybot/assets/README.md`](bk_solution_ai/projects/mybot/assets/README.md) for the audio
+format and update procedure.
 
-## 子模块版本管理
+## Submodule version management
 
-普通使用者应使用顶层仓库固定的版本：
+Regular users should keep the revisions pinned by the top-level repository:
 
 ```bash
 git pull --ff-only
@@ -188,52 +202,56 @@ git submodule sync --recursive
 git submodule update --init --recursive
 ```
 
-维护者需要更新 mybot 分支时，可执行：
+Maintainers can explicitly update both mybot branches with:
 
 ```bash
 git submodule update --remote --checkout bk_avdk_smp bk_solution_ai
 git diff --submodule=log
 ```
 
-更新后必须分别完成构建和设备验证，再在顶层仓库更新 gitlink。不要提交子模块内的
-`build/`、`__pycache__/` 或其他本地生成文件。
+After an update, build and validate both submodules before updating the gitlinks in the top-level
+repository. Do not commit `build/`, `__pycache__/`, or other locally generated files from a
+submodule.
 
-## 文档
+## Documentation
 
-- [mybot 项目](https://github.com/junlon2006/mybot)
-- [mybot 中文文档](https://github.com/junlon2006/mybot/blob/main/README.zh-CN.md)
-- [mybot 移植指南](https://github.com/junlon2006/mybot/blob/main/docs/PORTING.zh-CN.md)
-- [mybot 嵌入式集成指南](https://github.com/junlon2006/mybot/blob/main/docs/EMBEDDED.zh-CN.md)
-- [BK7258 平台组件说明](bk_solution_ai/components/mybot/README.md)
+- [mybot project](https://github.com/junlon2006/mybot)
+- [mybot English documentation](https://github.com/junlon2006/mybot/blob/main/README.md)
+- [mybot porting guide](https://github.com/junlon2006/mybot/blob/main/docs/PORTING.md)
+- [mybot embedded integration guide](https://github.com/junlon2006/mybot/blob/main/docs/EMBEDDED.md)
+- [BK7258 platform component notes](bk_solution_ai/components/mybot/README.md)
 
-## 贡献
+## Contributing
 
-欢迎通过 Issue 和 Pull Request 参与改进：
+Issues and pull requests are welcome:
 
-- 平台无关的 SDK 功能和公共接口改动，请优先提交到
-  [mybot 上游项目](https://github.com/junlon2006/mybot)。
-- BK7258 平台适配和固件工程改动，应提交到对应的
-  [bk_solution_ai](https://github.com/junlon2006/bk_solution_ai) 或
-  [bk_avdk_smp](https://github.com/junlon2006/bk_avdk_smp) 仓库，再更新本仓库的
-  submodule 指针。
-- 集成、构建和文档问题可提交到
-  [mybot-bk7258 Issues](https://github.com/junlon2006/mybot-bk7258/issues)。
+- Submit platform-independent SDK features and public API changes to the
+  [upstream mybot project](https://github.com/junlon2006/mybot).
+- Submit BK7258 platform or firmware changes to
+  [bk_solution_ai](https://github.com/junlon2006/bk_solution_ai) or
+  [bk_avdk_smp](https://github.com/junlon2006/bk_avdk_smp), then update the corresponding submodule
+  pointer in this repository.
+- Report integration, build, and documentation issues in
+  [mybot-bk7258 Issues](https://github.com/junlon2006/mybot-bk7258/issues).
 
-提交代码前请保持改动范围清晰，说明使用的硬件、配置和验证方式，并避免将构建产物
-提交到版本库。
+Keep each change focused. Describe the hardware, configuration, and validation used, and do not
+commit build artifacts.
 
-## 许可证与第三方依赖
+## License and third-party dependencies
 
-本顶层仓库中的原创内容采用 [Apache License 2.0](LICENSE)。
+Original content in this top-level repository is licensed under the
+[Apache License 2.0](LICENSE).
 
-两个子模块及其中的第三方组件分别适用其自身许可和使用条款，包括但不限于：
+The two submodules and their third-party components are governed by their respective licenses and
+terms of use, including but not limited to:
 
-- [bk_avdk_smp 许可证](bk_avdk_smp/LICENSE)
-- [bk_solution_ai 许可证](bk_solution_ai/LICENSE)
-- [mybot SDK 许可证](bk_solution_ai/components/mybot/LICENSE)
-- [AOSL 许可证及附加条款](bk_avdk_smp/ap/components/bk_thirdparty/agora-iot-sdk/hal/aosl/LICENSE)
-- [提示音资源许可证](bk_solution_ai/projects/mybot/assets/LICENSE.xiaozhi-esp32)
-- [mybot 第三方依赖说明](https://github.com/junlon2006/mybot/blob/main/THIRD_PARTY_NOTICES.md)
+- [bk_avdk_smp license](bk_avdk_smp/LICENSE)
+- [bk_solution_ai license](bk_solution_ai/LICENSE)
+- [mybot SDK license](bk_solution_ai/components/mybot/LICENSE)
+- [AOSL license and additional terms](bk_avdk_smp/ap/components/bk_thirdparty/agora-iot-sdk/hal/aosl/LICENSE)
+- [Prompt asset license](bk_solution_ai/projects/mybot/assets/LICENSE.xiaozhi-esp32)
+- [mybot third-party notices](https://github.com/junlon2006/mybot/blob/main/THIRD_PARTY_NOTICES.md)
 
-Agora RTSA 等预编译二进制可能受试用期限、再分发和商业授权限制。将本项目用于产品或
-对外分发固件前，请独立核实并遵守所有适用条款。
+Prebuilt binaries such as Agora RTSA may be subject to evaluation periods, redistribution
+restrictions, and commercial licensing requirements. Before using this project in a product or
+distributing firmware, independently review and comply with all applicable terms.
