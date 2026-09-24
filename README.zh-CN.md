@@ -105,6 +105,13 @@ make -C bk_solution_ai/projects/mybot clean SDK_DIR="$PWD/bk_avdk_smp"
 make -C bk_solution_ai/projects/mybot bk7258 SDK_DIR="$PWD/bk_avdk_smp"
 ```
 
+分别构建中英文固件可运行 `python3 scripts/build_all.py`。产物为
+`releases/bk7258-zh-CN.bin` 和 `releases/bk7258-en-US.bin`。使用
+`--language zh-CN` 或 `--language en-US` 可只构建一种语言；还支持
+`--dry-run`、`--no-clean`、`--build-root` 和 `--output-root`。脚本为每种语言
+创建独立的 AP/CP 构建目录，保留原工程配置和构建目录，仅在所有请求的构建成功后
+发布固件。
+
 构建结果位于 `bk_solution_ai/projects/mybot/build/bk7258/mybot/package/`：
 
 | 文件 | 用途 |

@@ -56,3 +56,8 @@ dkms.conf
 
 # Local Codex development skills
 /skills/
+
+# Isolated bilingual firmware builds and published images.
+/build/
+/releases/
+/scripts/__pycache__/

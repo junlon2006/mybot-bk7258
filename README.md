@@ -113,6 +113,14 @@ make -C bk_solution_ai/projects/mybot clean SDK_DIR="$PWD/bk_avdk_smp"
 make -C bk_solution_ai/projects/mybot bk7258 SDK_DIR="$PWD/bk_avdk_smp"
 ```
 
+To build Chinese and English firmware separately, run `python3 scripts/build_all.py`.
+The images are published as `releases/bk7258-zh-CN.bin` and
+`releases/bk7258-en-US.bin`. Use `--language zh-CN` or `--language en-US` to
+build one language. `--dry-run`, `--no-clean`, `--build-root`, and
+`--output-root` are also supported. Each variant has an isolated AP/CP build;
+the original project configuration and build directory are left intact. The
+images are published only after all requested builds succeed.
+
 Build outputs are written to `bk_solution_ai/projects/mybot/build/bk7258/mybot/package/`:
 
 | File | Purpose |
